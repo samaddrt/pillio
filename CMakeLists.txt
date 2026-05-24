@@ -12,25 +12,8 @@ if(WIN32)
     endif()
 endif()
 
-# ── Dependencies via FetchContent ───────────────────────────────────
-include(FetchContent)
-
-FetchContent_Declare(httplib
-    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
-    GIT_TAG        v0.15.3
-)
-
-FetchContent_Declare(nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.11.3
-)
-
-FetchContent_Declare(doctest
-    GIT_REPOSITORY https://github.com/doctest/doctest.git
-    GIT_TAG        v2.4.11
-)
-
-FetchContent_MakeAvailable(httplib nlohmann_json doctest)
+# ── Local single-header dependencies ───────────────────────────────
+set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 
 # ── Main executable ─────────────────────────────────────────────────
 add_executable(pillio
@@ -42,14 +25,10 @@ add_executable(pillio
     src/family.cpp
 )
 
-target_include_directories(pillio PRIVATE src)
-target_link_libraries(pillio PRIVATE
-    httplib::httplib
-    nlohmann_json::nlohmann_json
-)
+target_include_directories(pillio PRIVATE src ${THIRD_PARTY_DIR})
 
 if(UNIX)
-    target_link_libraries(pillio PRIVATE pthread)
+    target_link_libraries(pillio PRIVATE pthread ssl crypto)
 endif()
 
 # ── Test executable ─────────────────────────────────────────────────
@@ -62,11 +41,7 @@ add_executable(pillio_tests
     src/family.cpp
 )
 
-target_include_directories(pillio_tests PRIVATE src)
-target_link_libraries(pillio_tests PRIVATE
-    nlohmann_json::nlohmann_json
-    doctest::doctest
-)
+target_include_directories(pillio_tests PRIVATE src ${THIRD_PARTY_DIR})
 
 enable_testing()
 add_test(NAME pillio_tests COMMAND pillio_tests)
