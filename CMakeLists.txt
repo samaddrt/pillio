@@ -7,16 +7,30 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(WIN32)
     add_compile_definitions(_WIN32_WINNT=0x0A00)
-    # MinGW: httplib + regex generate huge debug objects
     if(MINGW)
         add_compile_options(-Wa,-mbig-obj)
     endif()
 endif()
 
-# ── Dependencies via vcpkg ──────────────────────────────────────────
-find_package(httplib CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-find_package(doctest CONFIG REQUIRED)
+# ── Dependencies via FetchContent ───────────────────────────────────
+include(FetchContent)
+
+FetchContent_Declare(httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG        v0.15.3
+)
+
+FetchContent_Declare(nlohmann_json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.11.3
+)
+
+FetchContent_Declare(doctest
+    GIT_REPOSITORY https://github.com/doctest/doctest.git
+    GIT_TAG        v2.4.11
+)
+
+FetchContent_MakeAvailable(httplib nlohmann_json doctest)
 
 # ── Main executable ─────────────────────────────────────────────────
 add_executable(pillio
@@ -33,6 +47,10 @@ target_link_libraries(pillio PRIVATE
     httplib::httplib
     nlohmann_json::nlohmann_json
 )
+
+if(UNIX)
+    target_link_libraries(pillio PRIVATE pthread)
+endif()
 
 # ── Test executable ─────────────────────────────────────────────────
 add_executable(pillio_tests
