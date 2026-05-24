@@ -1,6 +1,10 @@
 run = "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && cd .. && ./build/pillio"
 entrypoint = "src/main.cpp"
 
+[deployment]
+run = ["sh", "-c", "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && cd .. && ./build/pillio"]
+deploymentTarget = "cloudrun"
+
 [[ports]]
 localPort = 8080
 externalPort = 80
