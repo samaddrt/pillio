@@ -314,6 +314,7 @@ body {
   display:flex;align-items:center;justify-content:center;z-index:99;transition:.28s cubic-bezier(.4,0,.2,1);
 }
 .fab:active{transform:scale(.88) rotate(90deg)}
+.fab.hidden{opacity:0;pointer-events:none;transform:scale(.5) translateY(20px)}
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.66);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .28s}
@@ -453,6 +454,41 @@ body {
   justify-content:center;flex-shrink:0;transition:.15s;
 }
 .fam-unlink:active{color:var(--clay);transform:scale(.9)}
+.fam-person.clickable{cursor:pointer}
+.fam-person.clickable:active{transform:scale(.985);background:var(--card2)}
+.fam-chevron{color:var(--text3);font-size:16px;flex-shrink:0}
+
+/* ── Family member detail ───────────────────────────────────────── */
+.fd-head{display:flex;align-items:center;gap:13px;margin-bottom:18px}
+.fd-avatar{
+  width:52px;height:52px;border-radius:16px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font:600 19px var(--display);letter-spacing:-.2px;
+}
+.fd-name{font-family:var(--display);font-size:20px;font-weight:600;letter-spacing:-.3px}
+.fd-rel{font-size:12px;color:var(--text2);margin-top:2px}
+.fd-stats{display:flex;gap:8px;margin-bottom:20px}
+.fd-stat{
+  flex:1;background:var(--card);border:1px solid var(--border);border-radius:var(--rsm);
+  padding:13px 8px;text-align:center;
+}
+.fd-val{font-family:var(--display);font-size:23px;font-weight:700;color:var(--amber);line-height:1}
+.fd-lbl{font-size:9.5px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-top:6px}
+.fd-sec{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;margin:4px 0 10px}
+.fd-item{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--rsm);
+  padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:11px;
+}
+.fd-item-ic{
+  width:34px;height:34px;border-radius:11px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font:600 12px var(--display);
+}
+.fd-item-info{flex:1;min-width:0}
+.fd-item-name{font-size:13px;font-weight:600}
+.fd-item-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.fd-item-state{font-size:11px;font-weight:600;flex-shrink:0;padding:4px 9px;border-radius:9px}
+.fd-item-state.taken{background:var(--sage-bg);color:var(--sage)}
+.fd-item-state.pending{background:var(--bg3);color:var(--text3)}
 
 /* ── Settings ───────────────────────────────────────────────────── */
 .set-group{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin:12px 0}
@@ -753,6 +789,27 @@ body {
   </div>
 </div>
 
+<!-- ── FAMILY MEMBER DETAIL MODAL ─────────────────────────────────── -->
+<div class="ov" id="famOv">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="fd-head">
+      <div class="fd-avatar" id="fdAvatar"></div>
+      <div>
+        <div class="fd-name" id="fdName"></div>
+        <div class="fd-rel" id="fdRel"></div>
+      </div>
+    </div>
+    <div class="fd-stats">
+      <div class="fd-stat"><div class="fd-val" id="fdPct">0%</div><div class="fd-lbl">Прогресс</div></div>
+      <div class="fd-stat"><div class="fd-val" id="fdStreak">0</div><div class="fd-lbl">Серия дней</div></div>
+      <div class="fd-stat"><div class="fd-val" id="fdTaken">0/0</div><div class="fd-lbl">Принято</div></div>
+    </div>
+    <div class="fd-sec">Лекарства сегодня</div>
+    <div id="fdItems"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -825,8 +882,11 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   t.classList.add('active');
   $(t.dataset.p).classList.add('active');
+  // FAB добавления лекарств — только на главной
+  $('fab').classList.toggle('hidden', t.dataset.p !== 'pageHome');
   if (t.dataset.p === 'pageStats') loadStats();
-  if (t.dataset.p === 'pageFamily') loadFamily();
+  if (t.dataset.p === 'pageFamily') { loadFamily(); startFamilyPolling(); }
+  else stopFamilyPolling();
 });
 
 // ── Icon picker ─────────────────────────────────────────────────────
@@ -976,7 +1036,7 @@ function openModal()  { haptic(); $('ov').classList.add('open');    try { tg?.Ba
 function closeModal() {           $('ov').classList.remove('open'); try { tg?.BackButton?.hide() } catch {} }
 $('fab').onclick = openModal;
 $('ov').onclick  = e => { if (e.target === $('ov')) closeModal(); };
-try { tg?.BackButton?.onClick(closeModal) } catch {}
+try { tg?.BackButton?.onClick(() => { closeModal(); closeFamMember(); }) } catch {}
 
 $('btnSave').onclick = async () => {
   haptic();
@@ -1059,6 +1119,62 @@ document.querySelectorAll('.mood-btn').forEach(b => b.onclick = async () => {
 });
 
 // ── Family ──────────────────────────────────────────────────────────
+let followingCache = [];
+
+const MEAL_FULL = { before: 'До еды', during: 'Во время еды', after: 'После еды', none: '' };
+
+function openFamMember(idx) {
+  haptic();
+  const f = followingCache[idx];
+  if (!f) return;
+  const st = f.status || {};
+  const av = COLORS[Math.abs(f.chat_id) % COLORS.length];
+  const avEl = $('fdAvatar');
+  avEl.className = 'fd-avatar ' + av;
+  avEl.textContent = initials(f.name);
+  $('fdName').textContent = f.name || '?';
+  $('fdRel').textContent = f.relation || '';
+  $('fdPct').textContent = Math.round((st.progress || 0) * 100) + '%';
+  $('fdStreak').innerHTML = '🔥 ' + (st.streak || 0);
+  $('fdTaken').textContent = (st.taken || 0) + '/' + (st.total || 0);
+
+  const items = st.items || [];
+  const box = $('fdItems');
+  if (!items.length) {
+    box.innerHTML = '<div class="empty"><div class="empty-txt">Нет приёмов на сегодня</div></div>';
+  } else {
+    box.innerHTML = items.map(it => {
+      const time = (it.scheduled_time || '').substring(11, 16);
+      const meal = MEAL_FULL[it.meal_relation] || '';
+      const c = COLORS[Math.abs((it.pill_name || '').length) % COLORS.length];
+      return `<div class="fd-item">
+        <div class="fd-item-ic ${c}">${initials(it.pill_name)}</div>
+        <div class="fd-item-info">
+          <div class="fd-item-name">${esc(it.pill_name)}</div>
+          <div class="fd-item-meta">${time} · ${it.dosage}&thinsp;${esc(it.unit)}${meal ? ' · ' + meal : ''}</div>
+        </div>
+        <div class="fd-item-state ${it.taken ? 'taken' : 'pending'}">${it.taken ? '✓ принято' : 'ожидает'}</div>
+      </div>`;
+    }).join('');
+  }
+  $('famOv').classList.add('open');
+  try { tg?.BackButton?.show() } catch {}
+}
+function closeFamMember() { $('famOv').classList.remove('open'); try { tg?.BackButton?.hide() } catch {} }
+$('famOv').onclick = e => { if (e.target === $('famOv')) closeFamMember(); };
+
+// Автообновление, пока открыта вкладка «Семья»
+let famPollTimer = null;
+function startFamilyPolling() {
+  stopFamilyPolling();
+  famPollTimer = setInterval(() => {
+    if ($('pageFamily').classList.contains('active') && !$('famOv').classList.contains('open')) {
+      loadFamily();
+    }
+  }, 12000);
+}
+function stopFamilyPolling() { if (famPollTimer) { clearInterval(famPollTimer); famPollTimer = null; } }
+
 async function loadFamily() {
   // Ensure profile exists
   try {
@@ -1076,27 +1192,27 @@ async function loadFamily() {
     if (r.ok) {
       const d = await r.json();
       const list = d.following || [];
+      followingCache = list;
       const el = $('famFollowing');
       if (!list.length) {
         el.innerHTML = '<div class="empty"><div class="empty-txt">Вы пока ни за кем не следите</div></div>';
       } else {
-        el.innerHTML = list.map(f => {
+        el.innerHTML = list.map((f, idx) => {
           const pct = f.status ? Math.round((f.status.progress || 0) * 100) : 0;
           const taken = f.status?.taken || 0;
           const total = f.status?.total || 0;
           const av = COLORS[Math.abs(f.chat_id) % COLORS.length];
-          const pending = f.status?.pending || [];
-          return `<div class="fam-person">
+          return `<div class="fam-person clickable" onclick="openFamMember(${idx})">
             <div class="fam-avatar ${av}">${initials(f.name)}</div>
             <div class="fam-person-info">
               <div class="fam-person-name">${esc(f.name)}</div>
-              <div class="fam-person-rel">${esc(f.relation)}${pending.length ? ' · ⏰ ' + pending.map(p=>esc(p)).join(', ') : ''}</div>
+              <div class="fam-person-rel">${esc(f.relation)}</div>
             </div>
             <div class="fam-person-status">
               <div class="fam-person-pct">${pct}%</div>
               <div class="fam-person-sub">${taken}/${total}</div>
             </div>
-            <button class="fam-unlink" onclick="famUnlink(${f.chat_id})">✕</button>
+            <button class="fam-unlink" onclick="event.stopPropagation();famUnlink(${f.chat_id})">✕</button>
           </div>`;
         }).join('');
       }
