@@ -1,6 +1,10 @@
 run = "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && ./pillio"
 entrypoint = "src/main.cpp"
 
+[[ports]]
+localPort = 8080
+externalPort = 80
+
 [env]
 API_PORT = "8080"
 STORAGE_PATH = "/tmp/store.json"
