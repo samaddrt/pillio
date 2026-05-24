@@ -1,0 +1,16 @@
+# Build
+cmake-build-*/
+build/
+
+# Data
+data/store.json
+data/moods.json
+data/bot.json
+
+# Secrets
+bot/.env
+
+# IDE
+.idea/
+.vscode/
+*.swp

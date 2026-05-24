@@ -1,0 +1,10 @@
+{
+  "name": "pillio",
+  "version-string": "1.0.0",
+  "description": "Pillio — medication intake tracker (Telegram Mini App + C++ backend)",
+  "dependencies": [
+    "cpp-httplib",
+    "nlohmann-json",
+    "doctest"
+  ]
+}

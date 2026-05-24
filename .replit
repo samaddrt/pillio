@@ -1,0 +1,22 @@
+run = "mkdir -p build && cd build && cmake .. && make && ./pillio"
+entrypoint = "pillio"
+
+[env]
+API_PORT = "8080"
+STORAGE_PATH = "/tmp/store.json"
+FAMILY_STORAGE_PATH = "/tmp/family.json"
+
+[nix]
+channel = "unstable"
+
+[[nix.packages]]
+package = "cmake"
+
+[[nix.packages]]
+package = "gcc"
+
+[[nix.packages]]
+package = "pkg-config"
+
+[[nix.packages]]
+package = "openssl"
