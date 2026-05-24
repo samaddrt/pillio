@@ -1,4 +1,4 @@
-run = "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && ./pillio"
+run = "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && cd .. && ./build/pillio"
 entrypoint = "src/main.cpp"
 
 [[ports]]
