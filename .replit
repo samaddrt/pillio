@@ -1,8 +1,8 @@
-run = "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && cd .. && ./build/pillio"
+run = "bash start.sh"
 entrypoint = "src/main.cpp"
 
 [deployment]
-run = ["sh", "-c", "mkdir -p build && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc) && cd .. && ./build/pillio"]
+run = ["sh", "-c", "bash start.sh"]
 deploymentTarget = "cloudrun"
 
 [[ports]]
